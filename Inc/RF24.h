@@ -15,6 +15,9 @@
  *
  */
 
+#ifndef RF24_H_
+#define RF24_H_
+
 #include <stdint.h>
 #include "main.h"
 //#include "sysconfig.h"
@@ -69,3 +72,4 @@ void RF24_startListening(void);
 void RF24_stopListening(void);
 
 void RF24_read(void* pBuffer, uint8_t length);
+#endif
