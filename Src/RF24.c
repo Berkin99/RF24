@@ -8,6 +8,7 @@
  *  HAL Library integration.
  *
  *  10.02.2024 : Created.
+ *  19.03.2024 : Write Function added.
  *
  *	References:
  *  [0] nRF24L01+ Single Chip 2.4GHz Transceiver Preliminary Product Specification v1.0
@@ -18,9 +19,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-
 #include "nrf24l01.h"
 #include "RF24.h"
+
 #include "timer.h"
 
 
@@ -87,12 +88,12 @@ void RF24_Init(SPI_HandleTypeDef* hspi, GPIO_TypeDef* ce_gpio, uint16_t ce_pin, 
 
 void beginTransaction(void){
 	HAL_GPIO_WritePin(_cs_gpio, _cs_pin, GPIO_PIN_RESET);
-    delay_us(csDelay);
+	delayMicroseconds(csDelay);
 }
 
 void endTransaction(void){
 	HAL_GPIO_WritePin(_cs_gpio, _cs_pin, GPIO_PIN_SET);
-    delay_us(csDelay);
+	delayMicroseconds(csDelay);
 }
 
 uint8_t flush_rx(void){
@@ -299,7 +300,7 @@ void RF24_powerUp(void)
         // For nRF24L01+ to go from power down mode to TX or RX mode it must first pass through stand-by mode.
         // There must be a delay of Tpd2stby (see Table 16.) after the nRF24L01+ leaves power down mode before
         // the CEis set high. - Tpd2stby can be up to 5ms per the 1.0 datasheet
-        delay_us(RF24_POWERUP_DELAY);
+        delayMicroseconds(RF24_POWERUP_DELAY);
     }
 }
 
@@ -432,6 +433,10 @@ void RF24_closeReadingPipe(uint8_t pipe)
     }
 }
 
+void RF24_openWritingPipe(uint8_t* address){
+	RF24_writeRegister(RX_ADDR_P0, address, addr_width);
+	RF24_writeRegister(TX_ADDR, address, addr_width);
+}
 
 void RF24_startListening(void)
 {
@@ -460,7 +465,7 @@ void RF24_stopListening(void){
 
     HAL_GPIO_WritePin(_ce_gpio, _ce_pin, GPIO_PIN_RESET);
 
-	delay_us(txDelay);
+    delayMicroseconds(txDelay);
 	if (ack_payloads_enabled) {
 		flush_tx();
 	}
@@ -482,4 +487,30 @@ void RF24_read(void* pBuffer, uint8_t length)
     //Clear the only applicable interrupt flags
     uint8_t temp = (uint8_t)_BV(RX_DR);
     RF24_writeRegister(NRF_STATUS,&temp,1);
+}
+
+
+uint8_t RF24_write(const void* pBuffer, uint8_t length){
+
+	uint8_t multicast = 0;
+    RF24_writePayload(pBuffer, length, multicast ? W_TX_PAYLOAD_NO_ACK : W_TX_PAYLOAD);
+    HAL_GPIO_WritePin(_ce_gpio, _ce_pin, GPIO_PIN_SET);
+
+    uint32_t timer = millis();
+    while (!(RF24_getStatus() & (_BV(TX_DS) | _BV(MAX_RT)))) {
+		if (millis() - timer > 95) {
+			return 0;
+		}
+	}
+
+	HAL_GPIO_WritePin(_ce_gpio, _ce_pin, GPIO_PIN_RESET);
+
+	uint8_t data = (_BV(RX_DR) | _BV(TX_DS) | _BV(MAX_RT));
+	RF24_writeRegister(NRF_STATUS, &data, 1);
+	if (status & _BV(MAX_RT)) {
+		flush_tx(); // Only going to be 1 packet in the FIFO at a time using this method, so just flush
+		return 0;
+	}
+
+	return 1;
 }

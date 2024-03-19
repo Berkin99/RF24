@@ -8,6 +8,7 @@
  *  HAL Library integration.
  *
  *  10.02.2024 : Created.
+ *  19.03.2024 : Write Function added.
  *
  *	References:
  *  [0] nRF24L01+ Single Chip 2.4GHz Transceiver Preliminary Product Specification v1.0
@@ -15,13 +16,11 @@
  *
  */
 
+#include <stdint.h>
+#include "sysconfig.h"
+
 #ifndef RF24_H_
 #define RF24_H_
-
-#include <stdint.h>
-#include "main.h"
-//#include "sysconfig.h"
-
 
 typedef enum
 {
@@ -68,8 +67,12 @@ void RF24_powerUp(void);
 uint8_t RF24_begin(void);
 void RF24_openReadingPipe(uint8_t child, uint8_t* address);
 void RF24_closeReadingPipe(uint8_t pipe);
+void RF24_openWritingPipe(uint8_t* address);
+
 void RF24_startListening(void);
 void RF24_stopListening(void);
 
 void RF24_read(void* pBuffer, uint8_t length);
+uint8_t RF24_write(const void* pBuffer, uint8_t length);
+
 #endif
