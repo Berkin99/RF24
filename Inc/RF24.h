@@ -62,6 +62,7 @@ void RF24_setAddressWidth(uint8_t a_width);
 uint8_t RF24_available(void);
 uint8_t RF24_pipeAvailable(uint8_t* pipe_num);
 void RF24_setRetries(uint8_t delay, uint8_t count);
+uint8_t RF24_setDataRate(rf24_datarate_e speed);
 void RF24_powerUp(void);
 
 uint8_t RF24_begin(void);
